@@ -5,22 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { ref } from 'vue';
-import { Input } from '@/components/ui/input';
 
-const messages = ref([
-  { text: 'Hello! How can I help you?', sender: 'bot' }
-]);
-const userMessage = ref('');
-
-const sendMessage = () => {
-  if (userMessage.value.trim() === '') return;
-  messages.value.push({ text: userMessage.value, sender: 'user' });
-  userMessage.value = '';
-  
-  setTimeout(() => {
-    messages.value.push({ text: 'I am here to assist you!', sender: 'bot' });
-  }, 1000);
-};
 
 defineProps({
     profile: Object
@@ -110,19 +95,6 @@ defineProps({
     </Card>
   </div>
 
-  <div class="fixed bottom-4 right-4 w-72">
-    <Card>
-      <CardContent class="p-4 h-64 overflow-y-auto">
-        <div v-for="(msg, index) in messages" :key="index" class="mb-2">
-          <div :class="msg.sender === 'user' ? 'text-right text-blue-600' : 'text-left text-gray-600'">
-            {{ msg.text }}
-          </div>
-        </div>
-      </CardContent>
-      <div class="p-2 border-t flex items-center">
-        <Input v-model="userMessage" placeholder="Type a message..." class="flex-1 mr-2" @keyup.enter="sendMessage" />
-        <Button @click="sendMessage">Send</Button>
-      </div>
-    </Card>
-  </div>
+  
 </template>
+
