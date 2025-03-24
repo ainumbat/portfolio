@@ -27,7 +27,7 @@ class DashboardController extends Controller
 
         $message = Message::create($validated);
 
-        // broadcast(new MessageSent($message))->toOthers();
+        broadcast(new MessageSent($message))->toOthers();
 
         return response()->json(['message' => $message], 201);
     }

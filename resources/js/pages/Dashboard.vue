@@ -8,6 +8,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ref } from "vue";
 import { usePage } from '@inertiajs/vue3';
+import { onMounted } from 'vue';
+import '../echo';
 
 // Get current user from Inertia.js
 const page = usePage();
@@ -77,6 +79,15 @@ const sendMessage = async () => {
     console.error("Error sending message:", error);
   }
 };
+
+onMounted(() => {
+    Echo.private(`chat.${user.id}`)
+        .listen("MessageSent", (event) => {
+            messages.value.push(event);
+            console.log('Private message:', event.message);
+        });
+});
+
 </script>
 
 <template>
