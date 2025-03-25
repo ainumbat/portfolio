@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { ref } from "vue";
 import { usePage } from '@inertiajs/vue3';
 import { onMounted, nextTick } from 'vue';
+import moment from 'moment';
+import { watchEffect } from "vue";
 import '../echo';
 
 const message_received = new Audio('/sounds/message_received.mp3');
@@ -53,9 +55,10 @@ const selectUser = async (friend) => {
         messages.value = data.recent_chat;
 
         nextTick(() => {
-            if (chatContainer.value?.$el) {
-                chatContainer.value.$el.scrollTop = chatContainer.value.$el.scrollHeight;
-            }
+            chatContainer.value.$el.scrollTo({ top: chatContainer.value.$el.scrollHeight, behavior: 'smooth' });
+            // if (chatContainer.value?.$el) {
+            //     chatContainer.value.$el.scrollTop = chatContainer.value.$el.scrollHeight;
+            // }
         });
     } catch (error) {
         console.error("Error loading chat:", error);
@@ -97,12 +100,28 @@ const sendMessage = async () => {
   }
 };
 
+const isTyping = ref(false);
+
+watchEffect(() => {
+    if (userMessage.value.trim()) {
+        Echo.private(`chat.${receiver.value?.id}`).whisper('typing', { user: user.name });
+        isTyping.value = true;
+    } else {
+        isTyping.value = false;
+    }
+});
+
 onMounted(() => {
     Echo.private(`chat.${user.id}`)
         .listen("MessageSent", (event) => {
             messages.value.push(event);
             message_received.play();
+            nextTick(() => {
+                chatContainer.value.$el.scrollTop = chatContainer.value.$el.scrollHeight;
+            });
             // console.log('Private message:', event.message);
+        }).whisper('typing', (e) => {
+            console.log(`User ${e.user} is typing...`);
         });
 });
 
@@ -141,6 +160,7 @@ onMounted(() => {
                                     ? 'bg-green-500 text-white rounded-lg p-2 max-w-xs relative' 
                                     : 'bg-blue-300 text-black rounded-lg p-2 max-w-xs relative'">
                                 <span>{{ msg.message }}</span>
+                                <span class="block text-xs text-gray-600 mt-1">{{ moment(msg.created_at).fromNow() }}</span>
                                 <span 
                                     :class="msg.sender_id === user.id 
                                         ? 'absolute left-0 top-1/2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-r-green-500 border-transparent' 
