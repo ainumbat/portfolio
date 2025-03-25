@@ -8,8 +8,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ref } from "vue";
 import { usePage } from '@inertiajs/vue3';
-import { onMounted } from 'vue';
+import { onMounted, nextTick } from 'vue';
 import '../echo';
+
+const message_received = new Audio('/sounds/message_received.mp3');
+const message_sent = new Audio('/sounds/message_sent.wav');
 
 // Get current user from Inertia.js
 const page = usePage();
@@ -27,6 +30,7 @@ const props = defineProps({ users: Array });
 const messages = ref([]);
 const receiver = ref(null);
 const userMessage = ref('');
+const chatContainer = ref(null);
 
 // Select user & fetch chat history
 const selectUser = async (friend) => {
@@ -47,6 +51,12 @@ const selectUser = async (friend) => {
         const data = await response.json();
 
         messages.value = data.recent_chat;
+
+        nextTick(() => {
+            if (chatContainer.value?.$el) {
+                chatContainer.value.$el.scrollTop = chatContainer.value.$el.scrollHeight;
+            }
+        });
     } catch (error) {
         console.error("Error loading chat:", error);
     }
@@ -75,6 +85,13 @@ const sendMessage = async () => {
     });
 
     userMessage.value = "";
+    message_sent.play();
+
+    nextTick(() => {
+        if (chatContainer.value?.$el) {
+            chatContainer.value.$el.scrollTop = chatContainer.value.$el.scrollHeight;
+        }
+    });
   } catch (error) {
     console.error("Error sending message:", error);
   }
@@ -84,7 +101,8 @@ onMounted(() => {
     Echo.private(`chat.${user.id}`)
         .listen("MessageSent", (event) => {
             messages.value.push(event);
-            console.log('Private message:', event.message);
+            message_received.play();
+            // console.log('Private message:', event.message);
         });
 });
 
@@ -94,9 +112,9 @@ onMounted(() => {
     <Head title="Dashboard" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex">
+        <div class="flex h-[92vh]">
             <!-- Sidebar with Users -->
-            <aside class="w-64 h-screen bg-white shadow-lg p-4 border-r">
+            <aside class="w-64 h-[92vh] bg-white shadow-lg p-4 border-r overflow-y-auto">
                 <h2 class="text-xl font-bold mb-4">Users</h2>
                 <div class="space-y-2">
                     <button 
@@ -113,12 +131,21 @@ onMounted(() => {
             </aside>
 
             <!-- Chat Box -->
-            <div class="fixed bottom-4 right-4 w-96">
-                <Card>
-                    <CardContent class="p-4 h-96 overflow-y-auto">
-                        <div v-for="(msg, index) in messages" :key="index" class="mb-2">
-                            <div :class="msg.sender_id === user.id ? 'text-right text-blue-600' : 'text-left text-gray-600'">
-                                {{ msg.message }}
+            <div class="flex flex-col flex-1 h-full">
+                <Card class="flex flex-col h-[92vh]">  <!-- w-[50vw] h-[80vh] -->
+                    <CardContent ref="chatContainer" class="p-4 flex-1 overflow-y-auto">
+                        <div v-for="(msg, index) in messages" :key="index" class="mb-2 flex" 
+                             :class="msg.sender_id === user.id ? 'justify-start' : 'justify-end'">
+                            <div 
+                                :class="msg.sender_id === user.id 
+                                    ? 'bg-green-500 text-white rounded-lg p-2 max-w-xs relative' 
+                                    : 'bg-blue-300 text-black rounded-lg p-2 max-w-xs relative'">
+                                <span>{{ msg.message }}</span>
+                                <span 
+                                    :class="msg.sender_id === user.id 
+                                        ? 'absolute left-0 top-1/2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-r-green-500 border-transparent' 
+                                        : 'absolute right-0 top-1/2 w-0 h-0 border-t-8 border-b-8 border-l-8 border-l-blue-300 border-transparent'">
+                                </span>
                             </div>
                         </div>
                     </CardContent>
