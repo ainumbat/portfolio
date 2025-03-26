@@ -3,6 +3,8 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import PlaceholderPattern from '../components/PlaceholderPattern.vue';
+import { Toaster } from '@/components/ui/toast'
+import { useToast } from '@/components/ui/toast/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,6 +15,7 @@ import moment from 'moment';
 import { watchEffect } from "vue";
 import '../echo';
 
+const { toast } = useToast()
 const message_received = new Audio('/sounds/message_received.mp3');
 const message_sent = new Audio('/sounds/message_sent.wav');
 
@@ -111,15 +114,27 @@ watchEffect(() => {
     }
 });
 
+// Function to show toast notification
+const showToast = (sender: string, message: string) => {
+    toast({
+        title: "New Message from " + sender,
+        description: message,
+        duration: 3000, // Toast disappears after 3 seconds
+    });
+};
+
 onMounted(() => {
     Echo.private(`chat.${user.id}`)
         .listen("MessageSent", (event) => {
-            messages.value.push(event);
+            if (event.receiver_id == receiver.id) {
+                messages.value.push(event);
+            }
             message_received.play();
             nextTick(() => {
                 chatContainer.value.$el.scrollTop = chatContainer.value.$el.scrollHeight;
             });
-            // console.log('Private message:', event.message);
+            showToast(event.sender.name, event.message);
+            // console.log('Private message:', event);
         }).whisper('typing', (e) => {
             console.log(`User ${e.user} is typing...`);
         });
@@ -129,7 +144,7 @@ onMounted(() => {
 
 <template>
     <Head title="Dashboard" />
-
+    <Toaster />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-[92vh]">
             <!-- Sidebar with Users -->
