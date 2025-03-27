@@ -107,8 +107,9 @@ const isTyping = ref(false);
 
 watchEffect(() => {
     if (userMessage.value.trim()) {
-        Echo.private(`chat.${receiver.value?.id}`).whisper('typing', { user: user.name });
+        Echo.private(`chat.${receiver.value?.id}`).whisper('typing', { user: user });
         isTyping.value = true;
+        console.log(`chat.${receiver.value?.id} is typing..`)
     } else {
         isTyping.value = false;
     }
@@ -123,21 +124,34 @@ const showToast = (sender: string, message: string) => {
     });
 };
 
+const typingUser = ref(null);
+let typingTimeout;
+
 onMounted(() => {
     Echo.private(`chat.${user.id}`)
         .listen("MessageSent", (event) => {
-            if (event.receiver_id == receiver.id) {
+            if (event.receiver_id == receiver.value?.id) {
                 messages.value.push(event);
+                message_received.play();
+                nextTick(() => {
+                    chatContainer.value.$el.scrollTop = chatContainer.value.$el.scrollHeight;
+                });
             }
-            message_received.play();
-            nextTick(() => {
-                chatContainer.value.$el.scrollTop = chatContainer.value.$el.scrollHeight;
-            });
-            showToast(event.sender.name, event.message);
+            else {
+                showToast(event.sender.name, event.message);
+            }
             // console.log('Private message:', event);
-        }).whisper('typing', (e) => {
-            console.log(`User ${e.user} is typing...`);
+        }).listenForWhisper('typing', (e) => {
+            if (e.user.id == receiver.value?.id) {
+                typingUser.value = e.user.name;
+                clearTimeout(typingTimeout); // Clear the typing indicator after 3 seconds of inactivity
+                typingTimeout = setTimeout(() => {
+                typingUser.value = null;
+                }, 2000);
+            }
+            console.log(`${e.user} is typing...`);
         });
+
 });
 
 </script>
@@ -184,6 +198,9 @@ onMounted(() => {
                             </div>
                         </div>
                     </CardContent>
+                    <div v-if="typingUser" class="text-sm text-gray-500 px-2">
+                        {{ typingUser }} is typing...
+                    </div>
                     <div class="p-2 border-t flex items-center">
                         <Input v-model="userMessage" placeholder="Type a message..." class="flex-1 mr-2" @keyup.enter="sendMessage" />
                         <Button @click="sendMessage">Send</Button>
