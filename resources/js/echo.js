@@ -14,4 +14,4 @@ window.Echo = new Echo({
     cluster: undefined
 });
 
-console.log('Echo is listening at:'+import.meta.env.VITE_REVERB_HOST+':'+import.meta.env.VITE_REVERB_PORT);
+// console.log('Echo is listening at:'+import.meta.env.VITE_REVERB_HOST+':'+import.meta.env.VITE_REVERB_PORT);

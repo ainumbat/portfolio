@@ -36,6 +36,7 @@ const messages = ref([]);
 const receiver = ref(null);
 const userMessage = ref('');
 const chatContainer = ref(null);
+const onlineUsers = ref([]);
 
 // Select user & fetch chat history
 const selectUser = async (friend) => {
@@ -106,10 +107,12 @@ const sendMessage = async () => {
 const isTyping = ref(false);
 
 watchEffect(() => {
+    if (!receiver.value) return;
+
     if (userMessage.value.trim()) {
-        Echo.private(`chat.${receiver.value?.id}`).whisper('typing', { user: user });
+        Echo.join(`conversation.${receiver.value.id}`).whisper('typing', { user: user.name });
         isTyping.value = true;
-        console.log(`chat.${receiver.value?.id} is typing..`)
+        // console.log(`chat.${receiver.value?.id} is typing..`)
     } else {
         isTyping.value = false;
     }
@@ -130,7 +133,7 @@ let typingTimeout;
 onMounted(() => {
     Echo.private(`chat.${user.id}`)
         .listen("MessageSent", (event) => {
-            if (event.receiver_id == receiver.value?.id) {
+            if (event.sender.id == receiver.value?.id) {
                 messages.value.push(event);
                 message_received.play();
                 nextTick(() => {
@@ -138,20 +141,34 @@ onMounted(() => {
                 });
             }
             else {
+                console.log("event.sender_id: " + event.sender.id);
+                console.log("receiver.value?.id: " + receiver.value?.id);
                 showToast(event.sender.name, event.message);
             }
             // console.log('Private message:', event);
-        }).listenForWhisper('typing', (e) => {
-            if (e.user.id == receiver.value?.id) {
-                typingUser.value = e.user.name;
-                clearTimeout(typingTimeout); // Clear the typing indicator after 3 seconds of inactivity
-                typingTimeout = setTimeout(() => {
-                typingUser.value = null;
-                }, 2000);
-            }
-            console.log(`${e.user} is typing...`);
         });
-
+    
+    Echo.join(`conversation.${user.id}`)
+        .here((users) => {
+            onlineUsers.value = users.map((u) => u.id);
+            console.log('List of already online users.');
+        })
+        .joining((user) => {
+            onlineUsers.value.push(user.id);
+            console.log(user.id + ' is joining.');
+        })
+        .leaving((user) => {
+            onlineUsers.value = onlineUsers.value.filter((id) => id !== user.id);
+            console.log(user.id + ' is leaving.');
+        })
+        .listenForWhisper('typing', (e) => {
+            typingUser.value = e.user;
+            clearTimeout(typingTimeout); // Clear the typing indicator after 2 seconds of inactivity
+            typingTimeout = setTimeout(() => {
+                typingUser.value = null;
+            }, 900);
+            // console.log(`${e.user} is typing...`);
+        });
 });
 
 </script>
@@ -172,7 +189,7 @@ onMounted(() => {
                         class="flex items-center p-2 w-full text-left rounded-lg transition hover:bg-gray-200"
                         :class="receiver?.id === user.id ? 'bg-gray-300' : ''"
                     >
-                        <img :src="`https://i.pravatar.cc/40?img=${user.id}`" class="w-8 h-8 rounded-full mr-2" alt="Avatar" />
+                        <img :src="`https://i.pravatar.cc/40?img=${user.id}`" class="w-8 h-8 rounded-full mr-2 border-2 border-solid" :class="onlineUsers.includes(user.id) ? 'border-green-400' : 'border-gray-300'" alt="Avatar" />
                         <span class="text-gray-900">{{ user.name }}</span>
                     </button>
                 </div>
